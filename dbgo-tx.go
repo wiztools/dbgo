@@ -8,7 +8,7 @@ type Tx struct {
 }
 
 func (o *DBGo) TxBegin() (*Tx, error) {
-	tx, err := o.DB.Begin()
+	tx, err := o.db.Begin()
 	if err != nil {
 		return nil, err
 	}
