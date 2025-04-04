@@ -33,7 +33,7 @@ func (o *WhereBuilder) AddBetween(colName string, from, to any) {
 	o.betweenColVals = append(o.betweenColVals, to)
 }
 
-func (o *WhereBuilder) Gen(joiner string) (sqlPartial string, vals []any) {
+func (o *WhereBuilder) gen(joiner string) (sqlPartial string, vals []any) {
 	vals = []any{}
 
 	sb := strings.Builder{}
@@ -68,9 +68,9 @@ func (o *WhereBuilder) Gen(joiner string) (sqlPartial string, vals []any) {
 }
 
 func (o *WhereBuilder) GenAnd() (sqlPartial string, vals []any) {
-	return o.Gen(" AND ")
+	return o.gen(" AND ")
 }
 
 func (o *WhereBuilder) GenOr() (sqlPartial string, vals []any) {
-	return o.Gen(" OR ")
+	return o.gen(" OR ")
 }
