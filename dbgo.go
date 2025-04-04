@@ -34,3 +34,11 @@ func (o *DBGo) ExecGetRowsAffected(qry string, args ...any) (int64, error) {
 		return res.RowsAffected()
 	}
 }
+
+func (o *DBGo) QueryRow(qry string, args ...any) *sql.Row {
+	return o.db.QueryRow(qry, args...)
+}
+
+func (o *DBGo) Query(qry string, args ...any) (*sql.Rows, error) {
+	return o.db.Query(qry, args...)
+}
