@@ -1,36 +1,71 @@
 package dbgo
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 type WhereBuilder struct {
-	colNames []string
-	colVals  []any
+	whrCols    []string
+	whrColVals []any
 
-	betweenColNames []string
-	betweenColVals  []any
+	whrBetweenCols    []string
+	whrBetweenColVals []any
+
+	ordrByCols []string
+	ordrByDesc bool
+
+	limitRowCount  *int
+	limitRowOffset *int
 }
 
 func NewWhereBuilder() *WhereBuilder {
 	o := WhereBuilder{}
 
-	o.colNames = []string{}
-	o.colVals = []any{}
+	o.whrCols = []string{}
+	o.whrColVals = []any{}
 
-	o.betweenColNames = []string{}
-	o.betweenColVals = []any{}
+	o.whrBetweenCols = []string{}
+	o.whrBetweenColVals = []any{}
+
+	o.ordrByCols = []string{}
 
 	return &o
 }
 
 func (o *WhereBuilder) Add(colName string, colVal any) {
-	o.colNames = append(o.colNames, colName)
-	o.colVals = append(o.colVals, colVal)
+	o.whrCols = append(o.whrCols, colName)
+	o.whrColVals = append(o.whrColVals, colVal)
 }
 
 func (o *WhereBuilder) AddBetween(colName string, from, to any) {
-	o.betweenColNames = append(o.betweenColNames, colName)
-	o.betweenColVals = append(o.betweenColVals, from)
-	o.betweenColVals = append(o.betweenColVals, to)
+	o.whrBetweenCols = append(o.whrBetweenCols, colName)
+	o.whrBetweenColVals = append(o.whrBetweenColVals, from)
+	o.whrBetweenColVals = append(o.whrBetweenColVals, to)
+}
+
+func (o *WhereBuilder) AddOrdrByCols(colNames ...string) {
+	o.ordrByCols = append(o.ordrByCols, colNames...)
+}
+
+func (o *WhereBuilder) SetOrdrByDesc() {
+	o.ordrByDesc = true
+}
+
+func (o *WhereBuilder) SetLimitOffset(rowCount, rowOffset int) {
+	o.limitRowCount = &rowCount
+	o.limitRowOffset = &rowOffset
+}
+
+func (o *WhereBuilder) SetLimit(rowCount int) {
+	o.limitRowCount = &rowCount
+}
+
+func (o *WhereBuilder) SetPage(pageNumber, pageSize int) {
+	rowCount := pageSize
+	rowOffset := pageSize * pageNumber
+	o.limitRowCount = &rowCount
+	o.limitRowOffset = &rowOffset
 }
 
 func (o *WhereBuilder) gen(joiner string) (sqlPartial string, vals []any) {
@@ -38,28 +73,50 @@ func (o *WhereBuilder) gen(joiner string) (sqlPartial string, vals []any) {
 
 	sb := strings.Builder{}
 
-	if len(o.colNames) != 0 {
+	// Where conditions:
+	if len(o.whrCols) != 0 {
 		sb.WriteString(" WHERE ")
+
+		sb.WriteString(strings.Join(o.whrCols, "=?"+joiner))
+		sb.WriteString("=?")
+		vals = append(vals, o.whrColVals...)
 	}
 
-	sb.WriteString(strings.Join(o.colNames, "=?"+joiner))
-	sb.WriteString("=?")
-	vals = append(vals, o.colVals...)
-
-	if len(o.betweenColNames) != 0 {
-		if len(o.colNames) != 0 {
+	if len(o.whrBetweenCols) != 0 {
+		if len(o.whrCols) != 0 {
 			sb.WriteString(joiner)
 		} else {
 			sb.WriteString(" WHERE ")
 		}
-		for i, v := range o.betweenColNames {
+		for i, v := range o.whrBetweenCols {
 			if i != 0 {
 				sb.WriteString(joiner)
 			}
 			sb.WriteString(v)
 			sb.WriteString(" BETWEEN ? AND ?")
 		}
-		vals = append(vals, o.betweenColVals...)
+		vals = append(vals, o.whrBetweenColVals...)
+	}
+
+	// Order By:
+	if len(o.ordrByCols) > 0 {
+		sb.WriteString(" ORDER BY ")
+		sb.WriteString(strings.Join(o.ordrByCols, ", "))
+
+		if o.ordrByDesc {
+			sb.WriteString(" DESC")
+		}
+	}
+
+	// Pagination:
+	if o.limitRowCount != nil {
+		sb.WriteString(" LIMIT ")
+		sb.WriteString(strconv.Itoa(*o.limitRowCount))
+
+		if o.limitRowOffset != nil {
+			sb.WriteString(" OFFSET ")
+			sb.WriteString(strconv.Itoa(*o.limitRowOffset))
+		}
 	}
 
 	sqlPartial = sb.String()
