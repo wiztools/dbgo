@@ -68,6 +68,21 @@ func (o *WhereBuilder) SetPage(pageNumber, pageSize int) {
 	o.limitRowOffset = &rowOffset
 }
 
+func (o *WhereBuilder) GenLimit() (sqlPartial string) {
+	sb := strings.Builder{}
+	if o.limitRowCount != nil {
+		sb.WriteString(" LIMIT ")
+		sb.WriteString(strconv.Itoa(*o.limitRowCount))
+
+		if o.limitRowOffset != nil {
+			sb.WriteString(" OFFSET ")
+			sb.WriteString(strconv.Itoa(*o.limitRowOffset))
+		}
+	}
+	sqlPartial = sb.String()
+	return
+}
+
 func (o *WhereBuilder) gen(joiner string) (sqlPartial string, vals []any) {
 	vals = []any{}
 
@@ -109,15 +124,7 @@ func (o *WhereBuilder) gen(joiner string) (sqlPartial string, vals []any) {
 	}
 
 	// Pagination:
-	if o.limitRowCount != nil {
-		sb.WriteString(" LIMIT ")
-		sb.WriteString(strconv.Itoa(*o.limitRowCount))
-
-		if o.limitRowOffset != nil {
-			sb.WriteString(" OFFSET ")
-			sb.WriteString(strconv.Itoa(*o.limitRowOffset))
-		}
-	}
+	sb.WriteString(o.GenLimit())
 
 	sqlPartial = sb.String()
 
