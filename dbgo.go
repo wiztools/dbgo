@@ -19,19 +19,21 @@ func (o *DBGo) Exec(qry string, args ...any) (sql.Result, error) {
 	return res, nil
 }
 
-func (o *DBGo) ExecGetLastInsertId(qry string, args ...any) (int64, error) {
+func (o *DBGo) ExecGetLastInsertId(qry string, args ...any) (*int64, error) {
 	if res, err := o.Exec(qry, args...); err != nil {
-		return 0, err
+		return nil, err
 	} else {
-		return res.LastInsertId()
+		o, err := res.LastInsertId()
+		return &o, err
 	}
 }
 
-func (o *DBGo) ExecGetRowsAffected(qry string, args ...any) (int64, error) {
+func (o *DBGo) ExecGetRowsAffected(qry string, args ...any) (*int64, error) {
 	if res, err := o.Exec(qry, args...); err != nil {
-		return 0, err
+		return nil, err
 	} else {
-		return res.RowsAffected()
+		o, err := res.RowsAffected()
+		return &o, err
 	}
 }
 

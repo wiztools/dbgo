@@ -5,3 +5,15 @@ package dbgo
 type Scanner interface {
 	Scan(dest ...any) error
 }
+
+func ScanInt(row Scanner) (*int64, error) {
+	var id int64
+	err := row.Scan(&id)
+	return &id, err
+}
+
+func ScanString(row Scanner) (*string, error) {
+	var str string
+	err := row.Scan(&str)
+	return &str, err
+}
