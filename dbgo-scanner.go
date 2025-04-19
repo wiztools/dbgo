@@ -9,9 +9,9 @@ type Scanner interface {
 }
 
 func ScanInt(row Scanner) (*int64, error) {
-	var id int64
-	err := row.Scan(&id)
-	return &id, err
+	var num int64
+	err := row.Scan(&num)
+	return &num, err
 }
 
 func ScanFloat(row Scanner) (*float64, error) {
