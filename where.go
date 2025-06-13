@@ -21,6 +21,8 @@ type Group interface {
 type Wheres interface {
 	SetFuse(fuseType FuseType)
 	Add(colName string, colVal any)
+	AddIsNull(colName string)
+	AddIsNotNull(colName string)
 	AddBetween(colName string, from, to any)
 	AddGroup(group Group)
 }
@@ -34,6 +36,9 @@ type GroupImpl struct {
 	whrBetweenCols    []string
 	whrBetweenColVals []any
 
+	whrIsNullCols    []string
+	whrIsNotNullCols []string
+
 	groups []Group
 }
 
@@ -44,6 +49,8 @@ func NewGroup(fuseType FuseType) Group {
 		whrColVals:        []any{},
 		whrBetweenCols:    []string{},
 		whrBetweenColVals: []any{},
+		whrIsNullCols:     []string{},
+		whrIsNotNullCols:  []string{},
 		groups:            []Group{},
 	}
 }
@@ -55,6 +62,16 @@ func (o *GroupImpl) SetFuse(ft FuseType) {
 func (o *GroupImpl) Add(colName string, colVal any) {
 	o.whrCols = append(o.whrCols, colName)
 	o.whrColVals = append(o.whrColVals, colVal)
+}
+
+func (o *GroupImpl) AddIsNull(colName string) {
+	o.whrCols = append(o.whrCols, colName)
+	o.whrColVals = append(o.whrColVals, nil)
+}
+
+func (o *GroupImpl) AddIsNotNull(colName string) {
+	o.whrCols = append(o.whrCols, colName)
+	o.whrColVals = append(o.whrColVals, nil)
 }
 
 func (o *GroupImpl) AddBetween(colName string, from, to any) {
@@ -71,26 +88,65 @@ func (o *GroupImpl) gen(sb *strings.Builder, params *[]any) {
 
 	sb.WriteString("(")
 
-	for i, col := range o.whrCols {
-		if i > 0 {
-			sb.WriteString(fuse)
-		}
-		sb.WriteString(col)
-		sb.WriteString(" = ?")
-	}
-	*params = append(*params, o.whrColVals...)
+	fuseNeeded := false
 
-	for i, col := range o.whrBetweenCols {
-		if i > 0 {
+	if len(o.whrColVals) > 0 {
+		for i, col := range o.whrCols {
+			if i > 0 {
+				sb.WriteString(fuse)
+			}
+			sb.WriteString(col)
+			sb.WriteString(" = ?")
+		}
+		*params = append(*params, o.whrColVals...)
+		fuseNeeded = true
+	}
+
+	if len(o.whrBetweenCols) > 0 {
+		if fuseNeeded {
 			sb.WriteString(fuse)
 		}
-		sb.WriteString(col)
-		sb.WriteString(" BETWEEN ? AND ?")
+		for i, col := range o.whrBetweenCols {
+			if i > 0 {
+				sb.WriteString(fuse)
+			}
+			sb.WriteString(col)
+			sb.WriteString(" BETWEEN ? AND ?")
+		}
+		*params = append(*params, o.whrBetweenColVals...)
+		fuseNeeded = true
 	}
-	*params = append(*params, o.whrBetweenColVals...)
+
+	if len(o.whrIsNullCols) > 0 {
+		if fuseNeeded {
+			sb.WriteString(fuse)
+		}
+		for i, col := range o.whrIsNullCols {
+			if i > 0 {
+				sb.WriteString(fuse)
+			}
+			sb.WriteString(col)
+			sb.WriteString(" IS NULL")
+		}
+		fuseNeeded = true
+	}
+
+	if len(o.whrIsNotNullCols) > 0 {
+		if fuseNeeded {
+			sb.WriteString(fuse)
+		}
+		for i, col := range o.whrIsNullCols {
+			if i > 0 {
+				sb.WriteString(fuse)
+			}
+			sb.WriteString(col)
+			sb.WriteString(" IS NULL")
+		}
+		fuseNeeded = true
+	}
 
 	if len(o.groups) != 0 {
-		if len(o.whrCols) > 0 || len(o.whrBetweenCols) > 0 {
+		if fuseNeeded {
 			sb.WriteString(fuse)
 		}
 		for i, group := range o.groups {
@@ -99,6 +155,7 @@ func (o *GroupImpl) gen(sb *strings.Builder, params *[]any) {
 			}
 			group.gen(sb, params)
 		}
+		fuseNeeded = true
 	}
 
 	sb.WriteString(")")
@@ -112,6 +169,9 @@ type WhereBuilderImpl struct {
 
 	whrBetweenCols    []string
 	whrBetweenColVals []any
+
+	whrIsNullCols    []string
+	whrIsNotNullCols []string
 
 	groups []Group
 
@@ -143,6 +203,9 @@ func NewWhereBuilder(ft FuseType) WhereBuilder {
 	o.whrBetweenCols = []string{}
 	o.whrBetweenColVals = []any{}
 
+	o.whrIsNullCols = []string{}
+	o.whrIsNotNullCols = []string{}
+
 	o.groups = []Group{}
 
 	o.ordrByCols = []string{}
@@ -163,6 +226,14 @@ func (o *WhereBuilderImpl) AddBetween(colName string, from, to any) {
 	o.whrBetweenCols = append(o.whrBetweenCols, colName)
 	o.whrBetweenColVals = append(o.whrBetweenColVals, from)
 	o.whrBetweenColVals = append(o.whrBetweenColVals, to)
+}
+
+func (o *WhereBuilderImpl) AddIsNull(colName string) {
+	o.whrIsNullCols = append(o.whrIsNullCols, colName)
+}
+
+func (o *WhereBuilderImpl) AddIsNotNull(colName string) {
+	o.whrIsNotNullCols = append(o.whrIsNotNullCols, colName)
 }
 
 func (o *WhereBuilderImpl) AddGroup(group Group) {
@@ -215,9 +286,12 @@ func (o *WhereBuilderImpl) gen() (sqlPartial string, vals []any) {
 
 	fuse := fmt.Sprintf(" %s ", o.fuseType)
 
+	whereWritten := false
+
 	// Where conditions:
 	if len(o.whrCols) != 0 {
 		sb.WriteString(" WHERE ")
+		whereWritten = true
 
 		sb.WriteString(strings.Join(o.whrCols, "=?"+fuse))
 		sb.WriteString("=?")
@@ -225,10 +299,11 @@ func (o *WhereBuilderImpl) gen() (sqlPartial string, vals []any) {
 	}
 
 	if len(o.whrBetweenCols) != 0 {
-		if len(o.whrCols) != 0 {
+		if whereWritten {
 			sb.WriteString(fuse)
 		} else {
 			sb.WriteString(" WHERE ")
+			whereWritten = true
 		}
 		for i, v := range o.whrBetweenCols {
 			if i != 0 {
@@ -240,11 +315,44 @@ func (o *WhereBuilderImpl) gen() (sqlPartial string, vals []any) {
 		vals = append(vals, o.whrBetweenColVals...)
 	}
 
-	if len(o.groups) != 0 {
-		if len(o.whrCols) != 0 || len(o.whrBetweenCols) != 0 {
+	if len(o.whrIsNullCols) != 0 {
+		if whereWritten {
 			sb.WriteString(fuse)
 		} else {
 			sb.WriteString(" WHERE ")
+			whereWritten = true
+		}
+		for i, v := range o.whrIsNullCols {
+			if i != 0 {
+				sb.WriteString(fuse)
+			}
+			sb.WriteString(v)
+			sb.WriteString(" IS NULL")
+		}
+	}
+
+	if len(o.whrIsNotNullCols) != 0 {
+		if whereWritten {
+			sb.WriteString(fuse)
+		} else {
+			sb.WriteString(" WHERE ")
+			whereWritten = true
+		}
+		for i, v := range o.whrIsNotNullCols {
+			if i != 0 {
+				sb.WriteString(fuse)
+			}
+			sb.WriteString(v)
+			sb.WriteString(" IS NOT NULL")
+		}
+	}
+
+	if len(o.groups) != 0 {
+		if whereWritten {
+			sb.WriteString(fuse)
+		} else {
+			sb.WriteString(" WHERE ")
+			whereWritten = true
 		}
 		for i, group := range o.groups {
 			if i != 0 {

@@ -89,3 +89,22 @@ func TestGroupAnd(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestIsNull(t *testing.T) {
+	wb := NewWhereBuilder(AND)
+	wb.Add("acc_id", 101)
+	wb.Add("type", "create")
+	wb.AddIsNull("usr_id")
+	wb.AddIsNotNull("age")
+	partialQry, vals := wb.Gen()
+	log.Println(partialQry, "|", len(vals))
+	exp := " WHERE acc_id=? AND type=? AND usr_id IS NULL AND age IS NOT NULL"
+	if partialQry != exp {
+		t.Log("", partialQry, "|", len(vals))
+		t.Fail()
+	}
+	if len(vals) != 2 {
+		t.Log("len(vals) != 2")
+		t.Fail()
+	}
+}
