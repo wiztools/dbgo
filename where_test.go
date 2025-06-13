@@ -7,12 +7,12 @@ import (
 )
 
 func TestWhereBuilderAnd(t *testing.T) {
-	wb := NewWhereBuilder()
+	wb := NewWhereBuilder(AND)
 	wb.Add("acc_id", 101)
 	wb.Add("usr_id", 102)
 	wb.Add("type", "create")
 	wb.AddBetween("order_time", time.Now(), time.Now())
-	partialQry, vals := wb.GenAnd()
+	partialQry, vals := wb.Gen()
 	log.Println(partialQry, "|", len(vals))
 	if partialQry != " WHERE acc_id=? AND usr_id=? AND type=? AND order_time BETWEEN ? AND ?" {
 		t.Fail()
@@ -20,12 +20,12 @@ func TestWhereBuilderAnd(t *testing.T) {
 }
 
 func TestWhereBuilderOr(t *testing.T) {
-	wb := NewWhereBuilder()
+	wb := NewWhereBuilder(OR)
 	wb.Add("acc_id", 101)
 	wb.Add("usr_id", 102)
 	wb.Add("type", "create")
 	wb.AddBetween("order_time", time.Now(), time.Now())
-	partialQry, vals := wb.GenOr()
+	partialQry, vals := wb.Gen()
 	log.Println(partialQry, "|", len(vals))
 	if partialQry != " WHERE acc_id=? OR usr_id=? OR type=? OR order_time BETWEEN ? AND ?" {
 		t.Fail()
@@ -33,9 +33,9 @@ func TestWhereBuilderOr(t *testing.T) {
 }
 
 func TestWhereBuilderOnlyBetween(t *testing.T) {
-	wb := NewWhereBuilder()
+	wb := NewWhereBuilder(AND)
 	wb.AddBetween("order_time", time.Now(), time.Now())
-	partialQry, vals := wb.GenAnd()
+	partialQry, vals := wb.Gen()
 	log.Println(partialQry, "|", len(vals))
 	if partialQry != " WHERE order_time BETWEEN ? AND ?" {
 		t.Fail()
@@ -43,9 +43,9 @@ func TestWhereBuilderOnlyBetween(t *testing.T) {
 }
 
 func TestWhereBuilderOnlyOrdrBy(t *testing.T) {
-	wb := NewWhereBuilder()
+	wb := NewWhereBuilder(AND)
 	wb.AddOrdrByCols("salary", "age")
-	partialQry, vals := wb.GenAnd()
+	partialQry, vals := wb.Gen()
 	log.Println(partialQry, "|", len(vals))
 	if partialQry != " ORDER BY salary, age" {
 		t.Fail()
@@ -53,12 +53,39 @@ func TestWhereBuilderOnlyOrdrBy(t *testing.T) {
 }
 
 func TestWhereBuilderPage(t *testing.T) {
-	wb := NewWhereBuilder()
+	wb := NewWhereBuilder(AND)
 	wb.AddOrdrByCols("salary", "age")
 	wb.SetPage(2, 20)
-	partialQry, vals := wb.GenAnd()
+	partialQry, vals := wb.Gen()
 	log.Println(partialQry, "|", len(vals))
 	if partialQry != " ORDER BY salary, age LIMIT 20 OFFSET 40" {
+		t.Fail()
+	}
+}
+
+func TestGroupAnd(t *testing.T) {
+	wb := NewWhereBuilder(AND)
+	wb.Add("acc_id", 101)
+	wb.Add("type", "create")
+	grp := NewGroup(OR)
+	grp.Add("usr_id", 202)
+	grp.Add("usr_id", 303)
+	{
+		g := NewGroup(AND)
+		g.Add("age", 20)
+		g.Add("age", 30)
+		grp.AddGroup(g)
+	}
+	wb.AddGroup(grp)
+	partialQry, vals := wb.Gen()
+	log.Println(partialQry, "|", len(vals))
+	exp := " WHERE acc_id=? AND type=? AND (usr_id = ? OR usr_id = ? OR (age = ? AND age = ?))"
+	if partialQry != exp {
+		t.Log("", partialQry, "|", len(vals))
+		t.Fail()
+	}
+	if len(vals) != 6 {
+		t.Log("len(vals) != 6")
 		t.Fail()
 	}
 }
