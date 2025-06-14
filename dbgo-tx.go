@@ -27,20 +27,22 @@ func (t *Tx) Exec(query string, args ...any) (sql.Result, error) {
 	return t.tx.Exec(query, args...)
 }
 
-func (t *Tx) ExecGetLastInsertId(query string, args ...any) (int64, error) {
+func (t *Tx) ExecGetLastInsertId(query string, args ...any) (*int64, error) {
 	res, err := t.Exec(query, args...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return res.LastInsertId()
+	o, err := res.LastInsertId()
+	return &o, err
 }
 
-func (t *Tx) ExecGetRowsAffected(query string, args ...any) (int64, error) {
+func (t *Tx) ExecGetRowsAffected(query string, args ...any) (*int64, error) {
 	res, err := t.Exec(query, args...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return res.RowsAffected()
+	o, err := res.RowsAffected()
+	return &o, err
 }
 
 func (t *Tx) Query(query string, args ...any) (*sql.Rows, error) {
