@@ -4,7 +4,7 @@ import "testing"
 
 func TestInterface(t *testing.T) {
 	db := DBGo{}
-	fn := func(o DB) {}
+	fn := func(o DBOps) {}
 	fn(&db)
 
 	tx := Tx{}
