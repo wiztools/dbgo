@@ -2,7 +2,6 @@ package dbgo
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -178,17 +177,17 @@ type WhereBuilderImpl struct {
 	ordrByCols []string
 	ordrByDesc bool
 
-	limitRowCount  *int
-	limitRowOffset *int
+	limitRowCount  *int32
+	limitRowOffset *int32
 }
 
 type WhereBuilder interface {
 	Wheres
 	AddOrdrByCols(colNames ...string)
 	SetOrdrByDesc()
-	SetLimitOffset(rowCount, rowOffset int)
-	SetLimit(rowCount int)
-	SetPage(pageNumber, pageSize int)
+	SetLimitOffset(rowCount, rowOffset int32)
+	SetLimit(rowCount int32)
+	SetPage(pageNumber, pageSize int32)
 	Gen() (string, []any)
 }
 
@@ -248,16 +247,16 @@ func (o *WhereBuilderImpl) SetOrdrByDesc() {
 	o.ordrByDesc = true
 }
 
-func (o *WhereBuilderImpl) SetLimitOffset(rowCount, rowOffset int) {
+func (o *WhereBuilderImpl) SetLimitOffset(rowCount, rowOffset int32) {
 	o.limitRowCount = &rowCount
 	o.limitRowOffset = &rowOffset
 }
 
-func (o *WhereBuilderImpl) SetLimit(rowCount int) {
+func (o *WhereBuilderImpl) SetLimit(rowCount int32) {
 	o.limitRowCount = &rowCount
 }
 
-func (o *WhereBuilderImpl) SetPage(pageNumber, pageSize int) {
+func (o *WhereBuilderImpl) SetPage(pageNumber, pageSize int32) {
 	rowCount := pageSize
 	rowOffset := pageSize * pageNumber
 	o.limitRowCount = &rowCount
@@ -268,11 +267,11 @@ func (o *WhereBuilderImpl) GenLimit() (sqlPartial string) {
 	sb := strings.Builder{}
 	if o.limitRowCount != nil {
 		sb.WriteString(" LIMIT ")
-		sb.WriteString(strconv.Itoa(*o.limitRowCount))
+		sb.WriteString(fmt.Sprintf("%d", *o.limitRowCount))
 
 		if o.limitRowOffset != nil {
 			sb.WriteString(" OFFSET ")
-			sb.WriteString(strconv.Itoa(*o.limitRowOffset))
+			sb.WriteString(fmt.Sprintf("%d", *o.limitRowOffset))
 		}
 	}
 	sqlPartial = sb.String()
