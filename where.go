@@ -19,7 +19,7 @@ type Group interface {
 
 type Wheres interface {
 	SetFuse(fuseType FuseType)
-	AddRaw(colName string, colVal string)
+	AddRaw(conditions ...string)
 	Add(colName string, colVal any)
 	AddIsNull(colName string)
 	AddIsNotNull(colName string)
@@ -62,8 +62,8 @@ func (o *GroupImpl) SetFuse(ft FuseType) {
 	o.fuseType = ft
 }
 
-func (o *GroupImpl) AddRaw(colName, colVal string) {
-	o.whrRawCols = append(o.whrRawCols, colName+"="+colVal)
+func (o *GroupImpl) AddRaw(conditions ...string) {
+	o.whrRawCols = append(o.whrRawCols, conditions...)
 }
 
 func (o *GroupImpl) Add(colName string, colVal any) {
@@ -228,8 +228,8 @@ func (o *WhereBuilderImpl) SetFuse(ft FuseType) {
 	o.fuseType = ft
 }
 
-func (o *WhereBuilderImpl) AddRaw(colName, colVal string) {
-	o.whrRawCols = append(o.whrRawCols, colName+"="+colVal)
+func (o *WhereBuilderImpl) AddRaw(conditions ...string) {
+	o.whrRawCols = append(o.whrRawCols, conditions...)
 }
 
 func (o *WhereBuilderImpl) Add(colName string, colVal any) {

@@ -8,7 +8,7 @@ import (
 
 func TestWhereRaw(t *testing.T) {
 	wb := NewWhereBuilder(AND)
-	wb.AddRaw("acc_id", "101")
+	wb.AddRaw("acc_id=101")
 	wb.Add("usr_id", "102")
 	partialQry, vals := wb.Gen()
 	log.Println(partialQry, "|", len(vals))
