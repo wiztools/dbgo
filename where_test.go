@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+func TestWhereRaw(t *testing.T) {
+	wb := NewWhereBuilder(AND)
+	wb.AddRaw("acc_id", "101")
+	wb.Add("usr_id", "102")
+	partialQry, vals := wb.Gen()
+	log.Println(partialQry, "|", len(vals))
+	if partialQry != " WHERE acc_id=101 AND usr_id=?" {
+		t.Fail()
+	}
+}
+
 func TestWhereBuilderAnd(t *testing.T) {
 	wb := NewWhereBuilder(AND)
 	wb.Add("acc_id", 101)

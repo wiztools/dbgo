@@ -19,6 +19,7 @@ type Group interface {
 
 type Wheres interface {
 	SetFuse(fuseType FuseType)
+	AddRaw(colName string, colVal string)
 	Add(colName string, colVal any)
 	AddIsNull(colName string)
 	AddIsNotNull(colName string)
@@ -28,6 +29,8 @@ type Wheres interface {
 
 type GroupImpl struct {
 	fuseType FuseType
+
+	whrRawCols []string
 
 	whrCols    []string
 	whrColVals []any
@@ -44,6 +47,7 @@ type GroupImpl struct {
 func NewGroup(fuseType FuseType) Group {
 	return &GroupImpl{
 		fuseType:          fuseType,
+		whrRawCols:        []string{},
 		whrCols:           []string{},
 		whrColVals:        []any{},
 		whrBetweenCols:    []string{},
@@ -56,6 +60,10 @@ func NewGroup(fuseType FuseType) Group {
 
 func (o *GroupImpl) SetFuse(ft FuseType) {
 	o.fuseType = ft
+}
+
+func (o *GroupImpl) AddRaw(colName, colVal string) {
+	o.whrRawCols = append(o.whrRawCols, colName+"="+colVal)
 }
 
 func (o *GroupImpl) Add(colName string, colVal any) {
@@ -163,6 +171,8 @@ func (o *GroupImpl) gen(sb *strings.Builder, params *[]any) {
 type WhereBuilderImpl struct {
 	fuseType FuseType
 
+	whrRawCols []string
+
 	whrCols    []string
 	whrColVals []any
 
@@ -196,6 +206,8 @@ func NewWhereBuilder(ft FuseType) WhereBuilder {
 
 	o.fuseType = ft
 
+	o.whrRawCols = []string{}
+
 	o.whrCols = []string{}
 	o.whrColVals = []any{}
 
@@ -214,6 +226,10 @@ func NewWhereBuilder(ft FuseType) WhereBuilder {
 
 func (o *WhereBuilderImpl) SetFuse(ft FuseType) {
 	o.fuseType = ft
+}
+
+func (o *WhereBuilderImpl) AddRaw(colName, colVal string) {
+	o.whrRawCols = append(o.whrRawCols, colName+"="+colVal)
 }
 
 func (o *WhereBuilderImpl) Add(colName string, colVal any) {
@@ -287,10 +303,21 @@ func (o *WhereBuilderImpl) gen() (sqlPartial string, vals []any) {
 
 	whereWritten := false
 
-	// Where conditions:
-	if len(o.whrCols) != 0 {
+	// Raw columns:
+	if len(o.whrRawCols) != 0 {
 		sb.WriteString(" WHERE ")
 		whereWritten = true
+		sb.WriteString(strings.Join(o.whrRawCols, fuse))
+	}
+
+	// Where conditions:
+	if len(o.whrCols) != 0 {
+		if whereWritten {
+			sb.WriteString(fuse)
+		} else {
+			sb.WriteString(" WHERE ")
+			whereWritten = true
+		}
 
 		sb.WriteString(strings.Join(o.whrCols, "=?"+fuse))
 		sb.WriteString("=?")
